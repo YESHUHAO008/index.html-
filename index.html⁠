@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pollutant Standards Index</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f8f9fa;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding-top: 30px;
+      margin: 0;
+    }
+
+    h1 {
+      margin: 0 0 8px 0;
+      font-size: 24px;
+      color: #333;
+      font-weight: bold;
+    }
+
+    .subtitle-location {
+      font-size: 16px;
+      font-weight: bold;
+      color: #333;
+      margin-bottom: 4px;
+    }
+
+    .subtitle-status {
+      font-size: 13px;
+      color: #333;
+      margin-bottom: 20px;
+    }
+
+    table {
+      border-collapse: collapse;
+      width: 520px;
+      background-color: #ffffff;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    th, td {
+      border: 1px solid #c8d6c9;
+      padding: 6px 10px;
+      font-size: 13px;
+    }
+
+    th {
+      background-color: #6da252;
+      color: #224214;
+      font-weight: normal;
+    }
+
+    th.metric-header {
+      text-align: left;
+    }
+
+    th.region-header {
+      text-align: center;
+      width: 55px;
+    }
+
+    td.metric-name {
+      text-align: left;
+      color: #333;
+    }
+
+    td.value {
+      text-align: center;
+      color: #333;
+    }
+
+    tbody tr:nth-child(even) {
+      background-color: #f4f8f3;
+    }
+
+    .button-container {
+      margin-top: 15px;
+      margin-bottom: 15px;
+    }
+
+    button {
+      background-color: #a3c993;
+      border: 1px solid #7ea86d;
+      padding: 4px 14px;
+      font-size: 12px;
+      cursor: pointer;
+      border-radius: 2px;
+    }
+
+    button:hover {
+      background-color: #92ba82;
+    }
+
+    .footer-text {
+      font-size: 11px;
+      color: #333;
+      text-align: center;
+      line-height: 1.4;
+    }
+
+    .footer-text a {
+      color: #3b5998;
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Pollutant Standards Index</h1>
+  <div class="subtitle-location">Singapore</div>
+  <div class="subtitle-status" id="status-text">Status: Loading...</div>
+
+  <table>
+    <thead>
+      <tr>
+        <th class="metric-header">Metric</th>
+        <th class="region-header">central</th>
+        <th class="region-header">west</th>
+        <th class="region-header">east</th>
+        <th class="region-header">north</th>
+        <th class="region-header">south</th>
+      </tr>
+    </thead>
+    <tbody id="psi-table-body">
+      <tr>
+        <td colspan="6" style="text-align:center;">Fetching real-time API data...</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="button-container">
+    <button onclick="fetchPsiData()">Refresh</button>
+  </div>
+
+  <div class="footer-text">
+    Updated at: <span id="update-time">-</span><br>
+    by <a href=" ">YESHUHAO008</a > Source by <a href="https://data.gov.sg/datasets/d_fe37906a0182569d891506e815e819b7/view" target="_blank">Singapore Government Agency</a >
+  </div>
+
+  <script>
+    async function fetchPsiData() {
+      const apiUrl = 'https://api-open.data.gov.sg/v2/real-time/api/psi';
+      try {
+        const response = await fetch(apiUrl);
+        const data = await response.json();
+
+        if (!data || !data.data || !data.data.items || data.data.items.length === 0) {
+          document.getElementById('psi-table-body').innerHTML = '<tr><td colspan="6" style="text-align:center;">No data available</td></tr>';
+          return;
+        }
+
+        const psiItem = data.data.items[0];
+        const readings = psiItem.readings;
+        const status = data.data.psi_twenty_four_hourly?.status || 'Healthy';
+        
+        document.getElementById('status-text').innerText = `Status : ${status}`;
+        if (psiItem.timestamp) {
+          const formattedDate = new Date(psiItem.timestamp).toLocaleString();
+          document.getElementById('update-time').innerText = formattedDate;
+        }
+
+        const metricKeys = [
+          'o3_sub_index',
+          'pm10_twenty_four_hourly',
+          'pm10_sub_index',
+          'co_sub_index',
+          'pm25_twenty_four_hourly',
+          'so2_sub_index',
+          'co_eight_hour_max',
+          'no2_one_hour_max',
+          'so2_twenty_four_hourly',
+          'pm25_sub_index',
+          'psi_twenty_four_hourly',
+          'o3_eight_hour_max'
+        ];
+
+        const regions = ['central', 'west', 'east', 'north', 'south'];
+        let tableRowsHtml = '';
+
+        metricKeys.forEach(metric => {
+          if (readings[metric]) {
+            tableRowsHtml += `<tr>`;
+            tableRowsHtml += `<td class="metric-name">${metric}</td>`;
+            regions.forEach(region => {
+              const val = readings[metric][region] !== undefined ? readings[metric][region] : '-';
+              tableRowsHtml += `<td class="value">${val}</td>`;
+            });
+            tableRowsHtml += `</tr>`;
+          }
+        });
+
+        document.getElementById('psi-table-body').innerHTML = tableRowsHtml;
+
+      } catch (error) {
+        console.error('Error fetching PSI data:', error);
+        document.getElementById('psi-table-body').innerHTML = '<tr><td colspan="6" style="text-align:center; color:red;">Failed to load data from API.</td></tr>';
+      }
+    }
+
+    window.onload = fetchPsiData;
+  </script>
+</body>
+</html>
